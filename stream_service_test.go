@@ -26,10 +26,10 @@ func TestStreamService(t *testing.T) {
 	area, user := au.gen()
 	//area, user := Area{"streamServiceArea"}, User{"superuser"}
 
-	msgs := []Message{Message{&User{"other_user"}, "the others are here!"}, *area.joinMsg(user), Message{user, "testmsg"}}
+	msgs := []Message{*area.joinMsg(user), Message{user, "testmsg"}}
 	mch := make(chan string, 2)
 
-	cAddr, err := ss.InitiateStream(area, user, []Message{msgs[0]})
+	cAddr, err := ss.InitiateStream(area, user)
 	if err != nil {
 		t.Error("Error on InitiateStream!", err)
 	}

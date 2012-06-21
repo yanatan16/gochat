@@ -1,4 +1,4 @@
-package httphelp
+package gochat
 
 import (
 	"net/http"

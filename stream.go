@@ -33,7 +33,7 @@ type streamImpl struct {
 	signal chan bool
 }
 
-func RegisterStream(area *Area, user *User, backlog []Message) (s Stream, err error) {
+func RegisterStream(area *Area, user *User) (s Stream, err error) {
 
 	pub := redis.New(Cfg.SubAddr, Cfg.SubDb, Cfg.SubPassword)
 	sub := redis.NewSub(Cfg.SubAddr, Cfg.SubDb, Cfg.SubPassword)
@@ -53,7 +53,7 @@ func RegisterStream(area *Area, user *User, backlog []Message) (s Stream, err er
 		make(chan bool, 0),
 	}
 
-	go si.rcvGoroutine(backlog)
+	go si.rcvGoroutine()
 
 	// Send first message
 	msg := area.joinMsg(user)
@@ -112,33 +112,22 @@ func (s *streamImpl) Close() {
 	s.pub.Quit()
 }
 
-func (s *streamImpl) rcvGoroutine(backlog []Message) {
-	// Send the backlog of messages
-loop1:
-	for i := range backlog {
-		select {
-		case s.rcv <- backlog[i]:
-		case <-s.signal:
-			// Stream Closed!
-			break loop1
-		}
-	}
-
+func (s *streamImpl) rcvGoroutine() {
 	// Send any new messages
-loop2:
+loop:
 	for {
 		select {
 		case redisMsg, ok := <-s.sub.Messages:
 			if !ok {
 				// Connection lost!
-				break loop2
+				break loop
 			}
 			msg := NewMessage()
 			Deserialize(redisMsg.Elem.Bytes(), msg)
 			s.rcv <- *msg
 		case <-s.signal:
 			// Stream Closed!
-			break loop2
+			break loop
 		}
 	}
 

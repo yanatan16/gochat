@@ -3,13 +3,12 @@ package gochat
 import (
 	"code.google.com/p/go.net/websocket"
 	"fmt"
-	"gochat/httphelp"
 	"log"
 	"net/http"
 )
 
 type StreamService interface {
-	InitiateStream(area *Area, user *User, backlog []Message) (string, error)
+	InitiateStream(area *Area, user *User) (string, error)
 
 	CloseStream(area *Area, user *User)
 }
@@ -18,7 +17,7 @@ type streamServiceImpl struct {
 	addr    string
 	port    int
 	streams map[string]Stream
-	handler httphelp.SimpleHandler
+	handler SimpleHandler
 }
 
 func NewStreamService() StreamService {
@@ -26,15 +25,15 @@ func NewStreamService() StreamService {
 		Cfg.WsAddr,
 		Cfg.WsPort,
 		make(map[string]Stream),
-		httphelp.NewSimpleHandler(),
+		NewSimpleHandler(),
 	}
 	http.Handle("/", ss.handler)
 	go http.ListenAndServe(fmt.Sprintf(":%d", Cfg.WsPort), nil)
 	return ss
 }
 
-func (s *streamServiceImpl) InitiateStream(area *Area, user *User, backlog []Message) (sAddr string, err error) {
-	stream, err := RegisterStream(area, user, backlog)
+func (s *streamServiceImpl) InitiateStream(area *Area, user *User) (sAddr string, err error) {
+	stream, err := RegisterStream(area, user)
 	if err != nil {
 		return "", err
 	}

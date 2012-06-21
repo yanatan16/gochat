@@ -65,7 +65,7 @@ func noReceiveCheck(t *testing.T, s Stream) {
 func TestRegisterClose(t *testing.T) {
 	a, u := au.gen()
 
-	s, err := RegisterStream(a, u, []Message{})
+	s, err := RegisterStream(a, u)
 	if err != nil {
 		t.Fatal("Failed to register a test stream. Is redis there and configured for use?", err)
 	}
@@ -76,7 +76,7 @@ func TestRegisterClose(t *testing.T) {
 func TestReceive(t *testing.T) {
 	a, u := au.gen()
 
-	s, err := RegisterStream(a, u, []Message{})
+	s, err := RegisterStream(a, u)
 	if err != nil {
 		t.Fatal("Failed to register a test stream. Is redis there and configured for use?", err)
 	}
@@ -93,7 +93,7 @@ func TestReceive(t *testing.T) {
 func TestSend(t *testing.T) {
 	a, u := au.gen()
 
-	s, err := RegisterStream(a, u, []Message{})
+	s, err := RegisterStream(a, u)
 	if err != nil {
 		t.Fatal("Failed to register a test stream. Is redis there and configured for use?", err)
 	}
@@ -116,6 +116,8 @@ func TestSend(t *testing.T) {
 	}
 }
 
+/* Backlog has been deprecated
+
 func TestBacklog(t *testing.T) {
 	a, u := au.gen()
 	backlog := []Message{}
@@ -132,17 +134,18 @@ func TestBacklog(t *testing.T) {
 	receiveCheck(t, s, &backlog[1])
 	receiveCheck(t, s, a.joinMsg(u))
 }
+*/
 
 func TestStreamTwoUsers(t *testing.T) {
 	a1, u1 := au.gen()
 	_, u2 := au.gen()
 
-	s1, err := RegisterStream(a1, u1, []Message{})
+	s1, err := RegisterStream(a1, u1)
 	if err != nil {
 		t.Fatal("Failed to register a test stream. Is redis there and configured for use?", err)
 	}
 
-	s2, err := RegisterStream(a1, u2, []Message{})
+	s2, err := RegisterStream(a1, u2)
 	if err != nil {
 		t.Error("Couldn't create second Stream connection!", err)
 	}
