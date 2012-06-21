@@ -1,5 +1,8 @@
-// Package textchat forms the backend of a text chatting system using a memcached data storage layer and channels for asynchronous messaging.
-package textchat
+// Package gochat is a simple chat server written in go. It is designed to be used with a Redis backend for multi-instance deployments. 
+//
+// Make sure to update the config.json file for non-default options.
+//
+package gochat
 
 import (
 	"fmt"

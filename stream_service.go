@@ -1,9 +1,9 @@
-package textchat
+package gochat
 
 import (
 	"code.google.com/p/go.net/websocket"
 	"fmt"
-	"gf-backend/impl/httphelp"
+	"gochat/httphelp"
 	"log"
 	"net/http"
 )

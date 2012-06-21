@@ -1,4 +1,4 @@
-package textchat
+package gochat
 
 import (
 	"github.com/simonz05/godis/redis"

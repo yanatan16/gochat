@@ -1,4 +1,4 @@
-package textchat
+package gochat
 
 import (
 	"encoding/json"

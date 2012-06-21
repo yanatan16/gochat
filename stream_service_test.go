@@ -1,4 +1,4 @@
-package textchat
+package gochat
 
 import (
 	"code.google.com/p/go.net/websocket"
