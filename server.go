@@ -1,7 +1,7 @@
 package gochat
 
 import (
-	"github.com/simonz05/godis/redis"
+	"github.com/simonz05/godis"
 	"log"
 )
 
@@ -33,14 +33,14 @@ type Server interface {
 }
 
 type tcRedis struct {
-	db *redis.Client
+	db *godis.Client
 }
 
 var areasToken string = "textchat:Areas"
 
 func NewServer() Server {
 	var t tcRedis
-	t.db = redis.New(Cfg.DbAddr, Cfg.DbDb, Cfg.DbPassword)
+	t.db = godis.New(Cfg.DbAddr, Cfg.DbDb, Cfg.DbPassword)
 	return &t
 }
 

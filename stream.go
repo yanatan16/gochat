@@ -2,7 +2,7 @@ package gochat
 
 import (
 	"fmt"
-	"github.com/simonz05/godis/redis"
+	"github.com/simonz05/godis"
 	"log"
 )
 
@@ -25,8 +25,8 @@ type Stream interface {
 }
 
 type streamImpl struct {
-	pub    *redis.Client
-	sub    *redis.Sub
+	pub    *godis.Client
+	sub    *godis.Sub
 	rcv    chan Message
 	area   *Area
 	user   *User
@@ -35,8 +35,8 @@ type streamImpl struct {
 
 func RegisterStream(area *Area, user *User) (s Stream, err error) {
 
-	pub := redis.New(Cfg.SubAddr, Cfg.SubDb, Cfg.SubPassword)
-	sub := redis.NewSub(Cfg.SubAddr, Cfg.SubDb, Cfg.SubPassword)
+	pub := godis.New(Cfg.SubAddr, Cfg.SubDb, Cfg.SubPassword)
+	sub := godis.NewSub(Cfg.SubAddr, Cfg.SubDb, Cfg.SubPassword)
 
 	err = sub.Subscribe(area.token("Updates"))
 

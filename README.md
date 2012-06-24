@@ -4,8 +4,8 @@ gochat
 A backend chat server in Go.
 
 Gochat is a backend chat server which uses Redis as a database and messaging 
-backend (github.com/simonz05/godis/redis as go-based client) and websockets as 
-the primary form of send/receive message routing.
+backend (github.com/simonz05/godis as go-based client) and websockets as the 
+primary form of send/receive message routing.
 
 Structure
 =========
