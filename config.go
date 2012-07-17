@@ -1,12 +1,7 @@
 package gochat
 
-import (
-	"encoding/json"
-
-	"io/ioutil"
-	"log"
-)
-
+// Configuration parameters for gochat
+// Set these with SetConfig before instantiating anything
 type Config struct {
 	// Websocket Configuration
 	WsAddr string
@@ -23,21 +18,26 @@ type Config struct {
 	SubPassword string
 }
 
-var Cfg Config
+var Cfg *Config
 
-func init() {
-	ReadConfig()
+func SetConfig(cfg *Config) {
+	Cfg = cfg
 }
 
-func ReadConfig() {
-	data, err := ioutil.ReadFile("config.json")
-	if err != nil {
-		log.Fatalln("Could not open configuration file!", err)
-	}
-	err = json.Unmarshal(data, &Cfg)
-	if err != nil {
-		log.Fatalln("Could not unmarshal json configuration!", err)
-	}
+func init() {
+	fillWithDefaults()
+}
 
-	log.Println("Read Config:", Cfg)
+func fillWithDefaults() {
+	Cfg = &Config{
+		WsAddr: "127.0.0.1",
+		WsPort: 8001,
+		DbAddr: "127.0.0.1",
+		DbDb: 0,
+		DbPassword: "",
+		SubAddr: "127.0.0.1",
+		SubDb: 0,
+		SubPassword: "",
+
+	}
 }
