@@ -20,8 +20,8 @@ type Config struct {
 
 var Cfg *Config
 
-func SetConfig(cfg *Config) {
-	Cfg = cfg
+func TheConfig() *Config {
+	return Cfg
 }
 
 func init() {
