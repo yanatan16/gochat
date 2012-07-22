@@ -21,3 +21,8 @@ There are two main parts of Gochat:
 To use Gochat for your server, simply make the calls to Server that you require.  
 For joining areas, make sure to call Server.JoinArea() AND 
 StreamService.InitiateStream().
+
+Streams
+=======
+
+When a stream is opened up as a websocket to a client, the messages that travel from the server to the client (as well as visa versa) are specified in the [Stream Object Model](StreamObjectModel.md).
