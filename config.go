@@ -30,14 +30,13 @@ func init() {
 
 func fillWithDefaults() {
 	Cfg = &Config{
-		WsAddr: "127.0.0.1",
-		WsPort: 8001,
-		DbAddr: "127.0.0.1",
-		DbDb: 0,
-		DbPassword: "",
-		SubAddr: "127.0.0.1",
-		SubDb: 0,
+		WsAddr:      "127.0.0.1",
+		WsPort:      8001,
+		DbAddr:      "tcp:127.0.0.1:6379",
+		DbDb:        0,
+		DbPassword:  "",
+		SubAddr:     "tcp:127.0.0.1:6379",
+		SubDb:       0,
 		SubPassword: "",
-
 	}
 }

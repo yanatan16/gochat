@@ -1,6 +1,7 @@
 package gochat
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"testing"
@@ -25,14 +26,61 @@ func (g auGen) gen() (*Area, *User) {
 		&User{fmt.Sprintf("test-user-%d", int(g))}
 }
 
-func receiveCheck(t *testing.T, s Stream, exp *Message) {
+type streamObjectModelMsg struct {
+	Msg string
+}
+type streamObjectModelUser struct {
+	Name string
+}
+type streamObjectModel struct {
+	Id, Op string
+	Msgs   []streamObjectModelMsg
+	Users  []streamObjectModelUser
+}
+
+func receiveCheckChat(t *testing.T, s Stream, exp *Message) {
 	select {
 	case msg, ok := <-s.Receive():
 		if !ok {
-			t.Error("Receive channel closed unexpectedly!")
-		} else if msg.String() != exp.String() {
-			t.Errorf("Message received from area is incorrect! Expected: %s, Actual: %s", exp.String(), msg.String())
+			t.Fatal("Receive channel closed unexpectedly!")
 		}
+		obj := new(streamObjectModel)
+		err := json.Unmarshal([]byte(msg), &obj)
+		if err != nil {
+			t.Error("Couldn't unmarshal message", err, msg)
+		} else if obj.Id != "chat" {
+			t.Error("Message should be a chat message!", obj)
+		} else if len(obj.Msgs) != 1 {
+			t.Error("Message should contain at least 1 message", obj)
+		} else if obj.Msgs[0].Msg != exp.String() {
+			t.Errorf("Message contents are not as expected! (exp:%s) (act:%s)", exp.Msg, obj.Msgs[0].Msg)
+		}
+
+	case <-time.After(timeout):
+		t.Error("Receive channel contained no message when expected!", exp)
+	}
+}
+
+func receiveCheckUser(t *testing.T, s Stream, exp *User, op string) {
+	select {
+	case msg, ok := <-s.Receive():
+		if !ok {
+			t.Fatal("Receive channel closed unexpectedly!")
+		}
+		obj := new(streamObjectModel)
+		err := json.Unmarshal([]byte(msg), &obj)
+		if err != nil {
+			t.Error("Couldn't unmarshal message.", err, msg)
+		} else if obj.Id != "user" {
+			t.Error("Message should be a user message!", obj)
+		} else if obj.Op != op {
+			t.Errorf("User Message op should be %s, but is %s", op, obj.Op)
+		} else if len(obj.Users) != 1 {
+			t.Error("Message should contain at least 1 user", obj)
+		} else if obj.Users[0].Name != exp.Name {
+			t.Error("Message contents are not as expected!", obj)
+		}
+
 	case <-time.After(timeout):
 		t.Error("Receive channel contained no message when expected!", exp)
 	}
@@ -81,7 +129,8 @@ func TestReceive(t *testing.T) {
 		t.Fatal("Failed to register a test stream. Is redis there and configured for use?", err)
 	}
 
-	receiveCheck(t, s, a.joinMsg(u))
+	receiveCheckUser(t, s, u, "add")
+	receiveCheckChat(t, s, a.joinMsg(u))
 
 	noReceiveCheck(t, s)
 
@@ -98,7 +147,8 @@ func TestSend(t *testing.T) {
 		t.Fatal("Failed to register a test stream. Is redis there and configured for use?", err)
 	}
 
-	receiveCheck(t, s, a.joinMsg(u))
+	receiveCheckUser(t, s, u, "add")
+	receiveCheckChat(t, s, a.joinMsg(u))
 
 	msgstr := "my message!"
 	err = s.Send(msgstr)
@@ -106,7 +156,7 @@ func TestSend(t *testing.T) {
 		t.Error("Error on Sending message:", Message{u, msgstr}, err)
 	}
 
-	receiveCheck(t, s, &Message{u, msgstr})
+	receiveCheckChat(t, s, &Message{u, msgstr})
 
 	s.Close()
 
@@ -115,26 +165,6 @@ func TestSend(t *testing.T) {
 		t.Error("No error when sending on a closed Stream!")
 	}
 }
-
-/* Backlog has been deprecated
-
-func TestBacklog(t *testing.T) {
-	a, u := au.gen()
-	backlog := []Message{}
-	backlog = append(backlog, Message{&User{"testing"}, "testing message"})
-	backlog = append(backlog, Message{&User{"iamreal"}, "truth is fiction"})
-
-	s, err := RegisterStream(a, u, backlog)
-	if err != nil {
-		t.Fatal("Failed to register a test stream. Is redis there and configured for use?", err)
-	}
-	defer s.Close()
-
-	receiveCheck(t, s, &backlog[0])
-	receiveCheck(t, s, &backlog[1])
-	receiveCheck(t, s, a.joinMsg(u))
-}
-*/
 
 func TestStreamTwoUsers(t *testing.T) {
 	a1, u1 := au.gen()
@@ -151,10 +181,14 @@ func TestStreamTwoUsers(t *testing.T) {
 	}
 	defer s2.Close()
 
-	receiveCheck(t, s1, a1.joinMsg(u1))
-	//	receiveCheck(t, s2, a1.joinMsg(u1)) 
-	receiveCheck(t, s1, a1.joinMsg(u2))
-	receiveCheck(t, s2, a1.joinMsg(u2))
+	receiveCheckUser(t, s1, u1, "add")
+	receiveCheckChat(t, s1, a1.joinMsg(u1))
+
+	receiveCheckUser(t, s1, u2, "add")
+	receiveCheckChat(t, s1, a1.joinMsg(u2))
+
+	receiveCheckUser(t, s2, u2, "add")
+	receiveCheckChat(t, s2, a1.joinMsg(u2))
 
 	msgstr := "cross the streams!"
 	exp := &Message{u2, msgstr}
@@ -163,13 +197,13 @@ func TestStreamTwoUsers(t *testing.T) {
 		t.Error("Error on sending a message!", err)
 	}
 
-	receiveCheck(t, s1, exp)
-	receiveCheck(t, s2, exp)
+	receiveCheckChat(t, s1, exp)
+	receiveCheckChat(t, s2, exp)
 
 	s1.Close()
 
 	errReceiveCheck(t, s1)
-	receiveCheck(t, s2, a1.leaveMsg(u1))
+	receiveCheckUser(t, s2, u1, "rem")
+	receiveCheckChat(t, s2, a1.leaveMsg(u1))
 	noReceiveCheck(t, s2)
-
 }

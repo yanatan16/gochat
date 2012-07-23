@@ -55,18 +55,28 @@ func TestStreamService(t *testing.T) {
 	}()
 
 	// Send a message
-	err = websocket.Message.Send(client, "testmsg")
+	err = websocket.Message.Send(client, "{\"msg\":\"testmsg\"}")
 	if err != nil {
 		t.Error("Error on sending message through client websocket!")
+	}
+
+	select {
+	case usermsg := <-mch:
+		if usermsg != newStreamUserMessage(user, true).String() {
+			t.Fatalf("User message isn't what was expected! (exp:%s) (msg:%s)",
+				user.String(), usermsg)
+		}
+	case <-time.After(time.Second / 2):
+		t.Fatal("No messages received after timeout!")
 	}
 
 	for j := range msgs {
 		select {
 		case msg := <-mch:
-			if msg != msgs[j].String() {
+			if msg != newStreamChatMessage(&msgs[j]).String() {
 				t.Errorf("Message isn't what was expected! Exp: %s, Actual: %s", msgs[j].String(), msg)
 			}
-		case <-time.After(10 * time.Second):
+		case <-time.After(time.Second):
 			t.Error("No messages received after timeout!", j)
 		}
 	}

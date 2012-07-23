@@ -84,7 +84,13 @@ func StreamServer(s Stream, ws *websocket.Conn) {
 			break
 		}
 
-		err = s.Send(msg)
+		obj, err := interpretClientMessage(msg)
+		if err != nil {
+			log.Printf("Error interpreting message from client! (err: %s), (msg: %s)", err, msg)
+			continue
+		}
+
+		err = s.Send(obj.Msg)
 		if err != nil {
 			log.Printf("Error sending message for %s: %s", s.Name(), err.Error())
 			break
@@ -102,7 +108,7 @@ func StreamClient(s Stream, ws *websocket.Conn) {
 			break
 		}
 
-		err := websocket.Message.Send(ws, msg.String())
+		err := websocket.Message.Send(ws, msg)
 		if err != nil {
 			log.Printf("Error on sending message for stream %s!", s.Name())
 			break

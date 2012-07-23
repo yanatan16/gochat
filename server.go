@@ -49,7 +49,12 @@ func (t *tcRedis) Quit() {
 }
 
 func (t *tcRedis) CreateArea(area *Area) (err error) {
-	unique, err := t.db.Sadd(areasToken, Serialize(area))
+	s, err := Serialize(area)
+	if err != nil {
+		return err
+	}
+
+	unique, err := t.db.Sadd(areasToken, s)
 	if err != nil {
 		return throw("Area could not be created!", area.String(), err.Error())
 	}
@@ -60,7 +65,12 @@ func (t *tcRedis) CreateArea(area *Area) (err error) {
 	}
 
 	msg := area.welcome()
-	_, err = t.db.Publish(area.token("Updates"), Serialize(msg))
+	s, err = Serialize(msg)
+	if err != nil {
+		return err
+	}
+
+	_, err = t.db.Publish(area.token("Updates"), s)
 	if err != nil {
 		return err
 	}
@@ -71,11 +81,20 @@ func (t *tcRedis) CreateArea(area *Area) (err error) {
 func (t *tcRedis) DeleteArea(area *Area) {
 	t.db.Del(area.token("Users"), area.token("Messages"), area.token("Updates"))
 
-	t.db.Srem(areasToken, Serialize(area))
+	s, err := Serialize(area)
+	if err != nil {
+		log.Println("Error serializing area for removal!", err)
+	}
+	t.db.Srem(areasToken, s)
 }
 
 func (t *tcRedis) JoinArea(area *Area, user *User) error {
-	unique, err := t.db.Sadd(area.token("Users"), Serialize(user))
+	s, err := Serialize(user)
+	if err != nil {
+		return err
+	}
+
+	unique, err := t.db.Sadd(area.token("Users"), s)
 	if err != nil {
 		return err
 	}
@@ -86,7 +105,12 @@ func (t *tcRedis) JoinArea(area *Area, user *User) error {
 }
 
 func (t *tcRedis) LeaveArea(area *Area, user *User) error {
-	_, err := t.db.Srem(area.token("Users"), Serialize(user))
+	s, err := Serialize(user)
+	if err != nil {
+		return err
+	}
+
+	_, err = t.db.Srem(area.token("Users"), s)
 	if err != nil {
 		return throw("LeaveArea: User %s is not part of Area %s.", user.String(), area.String())
 	}
@@ -100,8 +124,9 @@ func (t *tcRedis) ListAreas() (areas []Area, err error) {
 	}
 	areasBytes := reply.BytesArray()
 	areas = make([]Area, len(areasBytes))
-	for i := range areasBytes {
-		Deserialize(areasBytes[i], &areas[i])
+	for i, a := range areasBytes {
+		area := &areas[i]
+		Deserialize(a, area)
 	}
 	return areas, nil
 }
@@ -113,8 +138,9 @@ func (t *tcRedis) ListUsers(area *Area) (users []User, err error) {
 	}
 	usersBytes := reply.BytesArray()
 	users = make([]User, len(usersBytes))
-	for i := range usersBytes {
-		Deserialize(usersBytes[i], &users[i])
+	for i, u := range usersBytes {
+		user := &users[i]
+		Deserialize(u, user)
 	}
 	return users, nil
 }
@@ -127,9 +153,10 @@ func (t *tcRedis) ListMessages(area *Area) (msgs []Message, err error) {
 
 	msgsBytes := rep.BytesArray()
 	msgs = make([]Message, len(msgsBytes))
-	for i := range msgsBytes {
-		msgs[i].Usr = new(User)
-		Deserialize(msgsBytes[i], &msgs[i])
+	for i, m := range msgsBytes {
+		msg := &msgs[i]
+		Deserialize(m, msg)
+		msgs[i].User = new(User)
 	}
 	return msgs, nil
 }

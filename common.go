@@ -6,12 +6,11 @@ package gochat
 
 import (
 	"fmt"
-	"strings"
 )
 
 type Message struct {
-	Usr *User
-	Msg string
+	User *User
+	Msg  string
 }
 
 type Area struct {
@@ -20,11 +19,6 @@ type Area struct {
 
 type User struct {
 	Name string
-}
-
-type Serializer interface {
-	Store() string
-	Parse(string)
 }
 
 type TextChatError string
@@ -56,8 +50,8 @@ func (u *User) String() string {
 }
 
 func (m *Message) String() string {
-	if len(m.Usr.String()) > 0 {
-		return fmt.Sprintf("%s: %s", m.Usr.String(), m.Msg)
+	if len(m.User.String()) > 0 {
+		return fmt.Sprintf("%s: %s", m.User.String(), m.Msg)
 	}
 	return m.Msg
 }
@@ -65,36 +59,8 @@ func (m *Message) String() string {
 func (s *TextChatError) Error() string {
 	return string(*s)
 }
-
-func (u *User) Store() string {
-	return u.Name
-}
-func (u *User) Parse(s string) {
-	u.Name = s
-}
-
-func (a *Area) Store() string {
-	return a.Name
-}
-func (a *Area) Parse(s string) {
-	a.Name = s
-}
-
-func (m *Message) Store() string {
-	return fmt.Sprintf("%s|%s", m.Usr.Store(), m.Msg)
-}
-func (m *Message) Parse(s string) {
-	ss := strings.SplitN(s, "|", 2)
-	if len(ss) == 1 {
-		m.Usr.Parse("")
-		m.Msg = strings.TrimLeft(ss[0], "|")
-	} else {
-		m.Usr.Parse(ss[0])
-		m.Msg = strings.TrimLeft(ss[1], "|")
-	}
-}
 func NewMessage() *Message {
 	msg := new(Message)
-	msg.Usr = new(User)
+	msg.User = new(User)
 	return msg
 }

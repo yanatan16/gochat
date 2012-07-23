@@ -8,10 +8,10 @@ import (
 
 type Stream interface {
 
-	// Get the receive channel of messages
-	Receive() <-chan Message
+	// Get the receive channel of messages to send to the client
+	Receive() <-chan string
 
-	// Send a string message
+	// Send a string chat message
 	Send(msg string) error
 
 	// Close the stream.
@@ -27,42 +27,38 @@ type Stream interface {
 type streamImpl struct {
 	pub    *godis.Client
 	sub    *godis.Sub
-	rcv    chan Message
+	rcv    chan string
 	area   *Area
 	user   *User
 	signal chan bool
 }
 
-func RegisterStream(area *Area, user *User) (s Stream, err error) {
+func RegisterStream(area *Area, user *User) (Stream, error) {
 
 	pub := godis.New(Cfg.SubAddr, Cfg.SubDb, Cfg.SubPassword)
 	sub := godis.NewSub(Cfg.SubAddr, Cfg.SubDb, Cfg.SubPassword)
 
-	err = sub.Subscribe(area.token("Updates"))
+	err := sub.Subscribe(area.token("Updates"))
 
 	if err != nil {
 		return nil, err
 	}
 
-	si := &streamImpl{
+	s := &streamImpl{
 		pub,
 		sub,
-		make(chan Message, 0),
+		make(chan string, 0),
 		area,
 		user,
 		make(chan bool, 0),
 	}
 
-	go si.rcvGoroutine()
+	go s.rcvGoroutine()
 
-	// Send first message
-	msg := area.joinMsg(user)
-	_, err = si.pub.Publish(si.area.token("Updates"), Serialize(msg))
-	if err != nil {
-		return nil, err
-	}
+	// Do on-join activities
+	s.onJoin()
 
-	return si, nil
+	return s, nil
 }
 
 func (s *streamImpl) IsClosed() bool {
@@ -77,7 +73,7 @@ func (s *streamImpl) IsClosed() bool {
 	return false
 }
 
-func (s *streamImpl) Receive() <-chan Message {
+func (s *streamImpl) Receive() <-chan string {
 	return s.rcv
 }
 
@@ -86,8 +82,8 @@ func (s *streamImpl) Send(m string) error {
 		return throw("Stream is closed!")
 	}
 
-	msg := Message{s.user, m}
-	_, err := s.pub.Publish(s.area.token("Updates"), Serialize(&msg))
+	msg := newStreamChatMessage(&Message{s.user, m})
+	_, err := s.pub.Publish(s.area.token("Updates"), msg.String())
 	if err != nil {
 		return err
 	}
@@ -99,13 +95,14 @@ func (s *streamImpl) Close() {
 		log.Println("Repeat close on closed stream.")
 		return
 	}
+
 	// Signal the goroutines
 	close(s.signal)
 
 	s.sub.Unsubscribe(s.area.token("Updates"))
 
-	// Send a leaving message
-	s.pub.Publish(s.area.token("Updates"), Serialize(s.area.leaveMsg(s.user)))
+	// Notify others of leaving
+	s.onLeave()
 
 	// Finish up
 	s.sub.Close()
@@ -122,9 +119,7 @@ loop:
 				// Connection lost!
 				break loop
 			}
-			msg := NewMessage()
-			Deserialize(redisMsg.Elem.Bytes(), msg)
-			s.rcv <- *msg
+			s.rcv <- string(redisMsg.Elem.Bytes())
 		case <-s.signal:
 			// Stream Closed!
 			break loop
@@ -136,4 +131,40 @@ loop:
 
 func (s *streamImpl) Name() string {
 	return fmt.Sprintf("Area: %s, User: %s", s.area.String(), s.user.String())
+}
+
+func (s *streamImpl) onJoin() error {
+	// Notify user-join
+	join := newStreamUserMessage(s.user, true)
+	_, err := s.pub.Publish(s.area.token("Updates"), join.String())
+	if err != nil {
+		return err
+	}
+
+	// Send join chat message
+	msg := newStreamChatMessage(s.area.joinMsg(s.user))
+	_, err = s.pub.Publish(s.area.token("Updates"), msg.String())
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *streamImpl) onLeave() error {
+	// Notify user-join
+	join := newStreamUserMessage(s.user, false) // false means leave
+	_, err := s.pub.Publish(s.area.token("Updates"), join.String())
+	if err != nil {
+		return err
+	}
+
+	// Send join chat message
+	msg := newStreamChatMessage(s.area.leaveMsg(s.user))
+	_, err = s.pub.Publish(s.area.token("Updates"), msg.String())
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

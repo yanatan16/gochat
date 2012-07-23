@@ -1,6 +1,7 @@
 package gochat
 
 import (
+	"encoding/json"
 	"fmt"
 )
 
@@ -17,14 +18,14 @@ func retry(f func() error, n int) error {
 	return err
 }
 
-func Deserialize(b []byte, data Serializer) {
-	if data == nil {
-		panic("Can't deserialize to nil Serializer!")
-	}
-	data.Parse(string(b))
+// Deserialize an object
+func Deserialize(b []byte, data interface{}) error {
+	return json.Unmarshal(b, data)
 }
-func Serialize(data Serializer) []byte {
-	return []byte(data.Store())
+
+// Serialize an object
+func Serialize(data interface{}) ([]byte, error) {
+	return json.Marshal(data)
 }
 
 func safeClose(c chan Message) {
